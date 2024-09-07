@@ -31,10 +31,10 @@
 static SLIST_HEAD (, mitm_entry) mitm_table;
 
 struct mitm_entry {
-   int selected;
-   int started;
-   struct mitm_method *mm;
-   SLIST_ENTRY (mitm_entry) next;
+   int selected;  // Whether this MITM method is selected for execution.
+   int started;   // Whether this MITM method has already been started.
+   struct mitm_method *mm; //Pointer to a mitm_method structure, which contains information and functions related to a particular MITM attack.
+   SLIST_ENTRY (mitm_entry) next;   // The pointer to the next element in the singly linked list.
 };
 
 static char *mitm_args = "";
@@ -46,7 +46,7 @@ static char *mitm_args = "";
  */
 void mitm_add(struct mitm_method *mm)
 {
-   struct mitm_entry *e;
+   struct mitm_entry *e;   // store information about a MITM method & link multiple entries in the singly linked list mitm_table.
 
    SAFE_CALLOC(e, 1, sizeof(struct mitm_entry));
 

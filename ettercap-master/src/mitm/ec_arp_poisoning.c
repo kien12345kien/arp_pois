@@ -62,8 +62,11 @@ static int create_list(void);
 
 void __init arp_poisoning_init(void)
 {
-   struct mitm_method mm;
+   // set arp module as a man-in-the-middle in ettercap
+   // struct mitm_method is in ec_mitm.h
+   struct mitm_method mm;     // set name method as "mm"
 
+   //
    mm.name = "arp";
    mm.start = &arp_poisoning_start;
    mm.stop = &arp_poisoning_stop;
@@ -81,10 +84,13 @@ static int arp_poisoning_start(char *args)
    int ret;
    char *p;
   
+   // a flag poison_oneway is set to 0
+   // it will be used to control whether ARP poisoning should be done in one direction only.
    poison_oneway = 0; 
-     
+
+   //indicate the start of the function.     
    DEBUG_MSG("arp_poisoning_start");
- 
+
    /* parse the args only if not empty */
    if (strcmp(args, "")) {
       for (p = strsep(&args, ","); p != NULL; p = strsep(&args, ",")) {
@@ -103,14 +109,24 @@ static int arp_poisoning_start(char *args)
    }
 
    /* arp poisoning only on etherenet */
+   // This checks the type of data link being used. ARP poisoning is only supported for certain 
+   //Ethernet (IL_TYPE_ETH)
+   // Token Ring (IL_TYPE_TR)
+   // FDDI (IL_TYPE_FDDI)
    if (EC_GBL_PCAP->dlt != IL_TYPE_ETH && EC_GBL_PCAP->dlt != IL_TYPE_TR && EC_GBL_PCAP->dlt != IL_TYPE_FDDI)
-      SEMIFATAL_ERROR("ARP poisoning does not support this media.\n");
+      SEMIFATAL_ERROR("ARP poisoning does not support this media.\n");  //If the network media type is not supported, a semi-fatal error is raised.
+
    
    /* we need the host list */
+   // check host list if it is empty --> SEMFATAL_ERROR
    if (LIST_EMPTY(&EC_GBL_HOSTLIST))
       SEMIFATAL_ERROR("ARP poisoning needs a non empty hosts list.\n");
    
    /* wipe the previous lists */
+   //Before starting ARP poisoning, any existing ARP poisoning groups (two lists, arp_group_one and arp_group_two) 
+   // are cleared. Each group is traversed, the items are removed from the list, 
+   // and memory is freed.
+
    LIST_FOREACH_SAFE(g, &arp_group_one, next, tmp) {
       LIST_REMOVE(g, next);
       SAFE_FREE(g);
@@ -131,12 +147,19 @@ static int arp_poisoning_start(char *args)
       SEMIFATAL_ERROR("ARP poisoning process cannot start.\n");
 
    /* create a hook to look for ARP requests while poisoning */
+   //confirm the poisoning by responding to ARP requests from poisoned hosts.
+   // A hook is added to intercept ARP request packets (HOOK_PACKET_ARP_RQ)
    hook_add(HOOK_PACKET_ARP_RQ, &arp_poisoning_confirm);
 
+
    /* create the poisoning thread */
+   // new thread is created to run the arp_poisoner function
+   //handle the actual poisoning process in the background, continuously sending forged ARP packets to the target hosts.
    ec_thread_new("arp_poisoner", "ARP poisoning module", &arp_poisoner, NULL);
 
+   // indicating that the ARP poisoning process has started successfully.
    return E_SUCCESS;
+   
 }
 
 
