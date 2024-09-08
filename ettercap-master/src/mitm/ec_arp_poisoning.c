@@ -85,7 +85,7 @@ static int arp_poisoning_start(char *args)
    char *p;
   
    // a flag poison_oneway is set to 0
-   // it will be used to control whether ARP poisoning should be done in one direction only.
+   // nhiệm vụ kiểm soát việc tấn công ARP poisoning một chiều hoặc hai chiều
    poison_oneway = 0; 
 
    //indicate the start of the function.     
@@ -94,15 +94,21 @@ static int arp_poisoning_start(char *args)
    /* parse the args only if not empty */
    if (strcmp(args, "")) {
       for (p = strsep(&args, ","); p != NULL; p = strsep(&args, ",")) {
+         // tham số là "remote", tùy chọn EC_GBL_OPTIONS->remote được đặt là 1, cho phép tấn công cả khi mục tiêu là máy cục bộ.
          if (!strcasecmp(p, "remote")) {
             /* 
             * allow sniffing of remote host even 
             * if the target is local (used for gw)
             */
             EC_GBL_OPTIONS->remote = 1;
-         } else if (!strcasecmp(p, "oneway")) {
+         } 
+         // tham số là "oneway", poison_oneway sẽ được đặt là 1, có nghĩa là tấn công ARP chỉ thực hiện một chiều (một hướng dữ liệu).
+         else if (!strcasecmp(p, "oneway")) {
             poison_oneway = 1; 
-         } else {
+         } 
+
+         // tham số k hợp lệ
+         else {
             SEMIFATAL_ERROR("ARP poisoning: parameter incorrect.\n");
          }
       }
@@ -122,11 +128,10 @@ static int arp_poisoning_start(char *args)
    if (LIST_EMPTY(&EC_GBL_HOSTLIST))
       SEMIFATAL_ERROR("ARP poisoning needs a non empty hosts list.\n");
    
-   /* wipe the previous lists */
+   /* xoá danh sách cũ*/
    //Before starting ARP poisoning, any existing ARP poisoning groups (two lists, arp_group_one and arp_group_two) 
    // are cleared. Each group is traversed, the items are removed from the list, 
    // and memory is freed.
-
    LIST_FOREACH_SAFE(g, &arp_group_one, next, tmp) {
       LIST_REMOVE(g, next);
       SAFE_FREE(g);
@@ -137,19 +142,22 @@ static int arp_poisoning_start(char *args)
       SAFE_FREE(g);
    }
    
-   /* create the list used later to poison the targets */
+   /* Tạo danh sách mục tiêu ARP poisoning */
+   //tùy chọn "silent mode" và load_hosts không được bật, 
+   //hàm sẽ gọi create_silent_list() để tạo danh sách mục tiêu trong chế độ im lặng.
    if (EC_GBL_OPTIONS->silent && !EC_GBL_OPTIONS->load_hosts)
       ret = create_silent_list();
+   // Ngược lại, hàm sẽ gọi create_list() để tạo danh sách mục tiêu từ danh sách host hiện có.
    else
       ret = create_list();
-
+   //Nếu không thể tạo danh sách (giá trị trả về khác E_SUCCESS), hàm sẽ báo lỗi và kết thúc.
    if (ret != E_SUCCESS)
       SEMIFATAL_ERROR("ARP poisoning process cannot start.\n");
 
    /* create a hook to look for ARP requests while poisoning */
    //confirm the poisoning by responding to ARP requests from poisoned hosts.
    // A hook is added to intercept ARP request packets (HOOK_PACKET_ARP_RQ)
-   hook_add(HOOK_PACKET_ARP_RQ, &arp_poisoning_confirm);
+   hook_add(HOOK_PACKET_ARP_RQ, &arp_poisoning_confirm);    //hook_add in ec_hook.c
 
 
    /* create the poisoning thread */
@@ -383,28 +391,35 @@ static void arp_poisoning_confirm(struct packet_object *po)
  * have to specify the mac address if you have specified an
  * ip address. you can also have an 'ANY' target and the 
  * arp poisoning will be broadcasted.
+ * 
+ * Hàm này nhằm mục đích chuẩn bị danh sách các mục tiêu 
+ * cho cuộc tấn công ARP poisoning, kiểm tra tính hợp lệ của các mục tiêu 
+ * và thêm chúng vào danh sách để thực hiện quá trình tấn công sau đó.
  */
 static int create_silent_list(void)
 {
-   struct ip_list *i, *j;
-   struct hosts_list *h, *g;
+   struct ip_list *i, *j;           //Con trỏ trỏ đến danh sách các địa chỉ IP của các mục tiêu (Target 1 và Target 2).
+   struct hosts_list *h, *g;        //Con trỏ trỏ đến các danh sách của các hosts tương ứng với các mục tiêu.
    char tmp[MAX_ASCII_ADDR_LEN];
    char tmp2[MAX_ASCII_ADDR_LEN];
    
    DEBUG_MSG("create_silent_list");
   
    /* allocate the struct */
+   /* cấp phát bộ nhớ cho cấu trúc host_list chứa thông tin về ip và mac cho mục tiêu*/
    SAFE_CALLOC(h, 1, sizeof(struct hosts_list));
    SAFE_CALLOC(g, 1, sizeof(struct hosts_list));
    
    USER_MSG("\nARP poisoning victims:\n\n");
    
 /* examine the first target */
+/* LIST_FIRST(&EC_GBL_TARGET1->ips lấy đia chỉ IP của mục tiêu 1*/
    if ((i = LIST_FIRST(&EC_GBL_TARGET1->ips)) != NULL) {
       
       /* the the ip was specified, even the mac address must be specified */
       if (!memcmp(EC_GBL_TARGET1->mac, "\x00\x00\x00\x00\x00\x00", MEDIA_ADDR_LEN) ) {
          USER_MSG("\nERROR: MAC address must be specified in silent mode.\n");
+         //không có địa chỉ MAC cho mục tiêu 1, hàm sẽ báo lỗi và thoát với mã lỗi -E_FATAL.
          return -E_FATAL;
       }
       
@@ -428,11 +443,13 @@ static int create_silent_list(void)
    }
    
 /* examine the second target */   
+/* LIST_FIRST(&EC_GBL_TARGET2->ips lấy địa chỉ IP mục tiêu 2*/
    if ((j = LIST_FIRST(&EC_GBL_TARGET2->ips)) != NULL) {
       
       /* the the ip was specified, even the mac address must be specified */
       if (!memcmp(EC_GBL_TARGET2->mac, "\x00\x00\x00\x00\x00\x00", MEDIA_ADDR_LEN) ) {
          USER_MSG("\nERROR: MAC address must be specified in silent mode.\n");
+         //không có địa chỉ MAC cho mục tiêu 2, hàm sẽ báo lỗi và thoát với mã lỗi -E_FATAL.
          return -E_FATAL;
       }
       USER_MSG(" TARGET 2 : %-15s %17s\n", ip_addr_ntoa(&j->ip, tmp), mac_addr_ntoa(EC_GBL_TARGET2->mac, tmp2));
@@ -454,16 +471,20 @@ static int create_silent_list(void)
       memcpy(&g->mac, MEDIA_BROADCAST, MEDIA_ADDR_LEN);
    }
 
+// Hàm kiểm tra xem hai mục tiêu có khác nhau không và kiểm tra xem cả hai địa chỉ IP đều phải thuộc giao thức IPv4 (AF_INET).
+// Nếu các điều kiện này không thỏa mãn, hàm sẽ báo lỗi và giải phóng bộ nhớ đã cấp phát.
    if (i == j || 
        ntohs(i->ip.addr_type) != AF_INET || 
-       ntohs(j->ip.addr_type) != AF_INET) {
+       ntohs(j->ip.addr_type) != AF_INET) 
+   {
       USER_MSG("\nERROR: Cannot ARP poison these targets...\n");
-      SAFE_FREE(h);
-      SAFE_FREE(g);
+      SAFE_FREE(h);     // giải phóng bộ nhớ
+      SAFE_FREE(g);     // giải phóng bộ nhớ
       return -E_FATAL;
    }
 
    /* add the elements in the two lists */
+   //Nếu không có lỗi, hai mục tiêu sẽ được thêm vào hai danh sách arp_group_one và arp_group_two để xử lý tiếp theo.
    LIST_INSERT_HEAD(&arp_group_one, h, next);
    LIST_INSERT_HEAD(&arp_group_two, g, next);
 
