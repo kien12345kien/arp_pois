@@ -270,7 +270,8 @@ libnet_ptag_t ec_build_link_layer(u_int8 dlt, u_int8 *dst, u_int16 proto, libnet
 
 
 /*
- * helper function to send out an ARP packet
+ * helper function to send out an ARP packet 
+ // chức năng trợ giúp để gửi một gói ARP
  */
 int send_arp(u_char type, struct ip_addr *sip, u_int8 *smac, struct ip_addr *tip, u_int8 *tmac)
 {
@@ -279,6 +280,7 @@ int send_arp(u_char type, struct ip_addr *sip, u_int8 *smac, struct ip_addr *tip
    int c;
 
    /* if not lnet warn the developer ;) */
+   /**/
    BUG_IF(EC_GBL_IFACE->lnet == NULL);
    l = EC_GBL_IFACE->lnet;
 

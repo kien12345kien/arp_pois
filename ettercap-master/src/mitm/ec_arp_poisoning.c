@@ -294,14 +294,16 @@ EC_THREAD_FUNC(arp_poisoner)
             /* Không tấn công chính mình: Nếu địa chỉ IP của hai thiết bị 
             trong g1 và g2 là giống nhau (ip_addr_cmp(&g1->ip, &g2->ip) trả về 0), 
             chương trình sẽ bỏ qua việc gửi gói tin ARP, tránh tự tấn công. */
-            if (!ip_addr_cmp(&g1->ip, &g2->ip))
+            if (!ip_addr_cmp(&g1->ip, &g2->ip))    // ip_addr_cmp so sách 2 địa chỉ IP trong ec_inet.c
                continue;
            
             if (!EC_GBL_CONF->arp_poison_equal_mac)
+
                /* Không tấn công các thiết bị có cùng địa chỉ MAC: Nếu địa chỉ MAC 
                của hai thiết bị giống nhau (memcmp(g1->mac, g2->mac, MEDIA_ADDR_LEN) 
                trả về 0) và tùy chọn arp_poison_equal_mac bị tắt, chương trình sẽ 
                bỏ qua gói tin ARP.*/
+               // https://quantrimang.com/hoc/ham-memcmp-trong-c-157995
                if (!memcmp(g1->mac, g2->mac, MEDIA_ADDR_LEN))
                   continue;
             
@@ -322,7 +324,7 @@ EC_THREAD_FUNC(arp_poisoner)
                   send_L2_icmp_echo(ICMP_ECHO, &g1->ip, &g2->ip, g2->mac);
             }
             
-            /* the effective poisoning packets */
+            /* chương trình sẽ gửi các gói tin ARP reply giả mạo */
             if (EC_GBL_CONF->arp_poison_reply) {
                // gửi ARP reply packages from g2 to g1
                send_arp(ARPOP_REPLY, &g2->ip, EC_GBL_IFACE->mac, &g1->ip, g1->mac); 
@@ -330,7 +332,7 @@ EC_THREAD_FUNC(arp_poisoner)
                if (!poison_oneway)
                   send_arp(ARPOP_REPLY, &g1->ip, EC_GBL_IFACE->mac, &g2->ip, g2->mac); 
             }
-            /* request attack */
+            /* chương trình sẽ gửi các gói tin ARP request giả mạo */
             if (EC_GBL_CONF->arp_poison_request) {
                // gửi ARP request từ nạn nhân nhóm 2 đến nạn nhân nhóm 1
                send_arp(ARPOP_REQUEST, &g2->ip, EC_GBL_IFACE->mac, &g1->ip, g1->mac); 
@@ -652,3 +654,10 @@ static int create_list(void)
 
 // vim:ts=3:expandtab
 
+
+/*
+file ec_arp_poisoning.c có liên kết với file etter.conf.v4 không?
+làm sao để các hàm arp_poison_icmp, arp_poison_reply, và arp_poison_request lấy giá trị?
+liệu giá trị arp_poison_icmp, arp_poison_reply, và arp_poison_request có thể thay đổi hay cố điịnh?
+
+*/

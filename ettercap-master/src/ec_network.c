@@ -467,4 +467,3 @@ struct iface_env* iface_by_mac(u_int8 mac[MEDIA_ADDR_LEN])
    SOURCES_LIST_UNLOCK;
    return NULL;
 }
-

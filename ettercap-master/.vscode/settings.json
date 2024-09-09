@@ -1,0 +1,21 @@
+{
+    "files.associations": {
+        "ec_filter.h": "c",
+        "ec_encryption.h": "c",
+        "ec_utils.h": "c",
+        "regex.h": "c",
+        "pcap.h": "c",
+        "ec_send.h": "c",
+        "ec_threads.h": "c",
+        "ec_stdint.h": "c",
+        "pthread.h": "c",
+        "ec_hook.h": "c",
+        "errno.h": "c",
+        "ec_network.h": "c",
+        "ec_inet.h": "c",
+        "ec.h": "c",
+        "ec_packet.h": "c",
+        "locale": "c",
+        "cstring": "c"
+    }
+}
