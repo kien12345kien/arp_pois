@@ -1,0 +1,41 @@
+Function arp_poisoner()
+    Initialize thread
+    i = 1
+
+    While true (infinite loop)
+        canceled loop condition
+        
+        Loop through arp_group_one (g1)
+            Loop through arp_group_two (g2)
+
+                If g1 has the same IP as g2, 
+			continue
+                
+                If arp_poison_equal_mac is disabled and g1 and g2 have the same MAC address, 
+			skip to the next pair
+
+                If arp_poison_icmp is enabled and i equals 1
+                    Send ICMP echo from g2 to g1
+                    If poison_oneway is disabled, send ICMP echo from g1 to g2
+                
+                If arp_poison_reply is enabled
+                    Send fake ARP reply from g2 to g1
+                    If poison_oneway is disabled, send fake ARP reply from g1 to g2
+
+                If arp_poison_request is enabled
+                    Send fake ARP request from g2 to g1
+                    If poison_oneway is disabled, send fake ARP request from g1 to g2
+                
+                Wait for arp_storm_delay before proceeding to the next step
+
+        If arp_poison_smart is enabled and i >= 3, exit the function
+        
+        If i < 5
+            Wait for arp_poison_warm_up delay
+            Increment i by 1
+        Else
+            Wait for arp_poison_delay
+
+    End while
+End function
+

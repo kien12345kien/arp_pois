@@ -399,6 +399,8 @@ static void arp_poisoning_confirm(struct packet_object *po)
    LIST_FOREACH(g1, &arp_group_one, next) {
       /* if the sender is in group one ... */
       // po->L3.src là địa chỉ IP nguồn gửi đi gói ARP request
+      //nếu L3.src có trong g1 thì hàm ip_addr_cmd trả về 0 là false
+      //thì !0 = true
       if (!ip_addr_cmp(&po->L3.src, &g1->ip)) {
          /* look if the target is in group two ... */
          LIST_FOREACH(g2, &arp_group_two, next) {

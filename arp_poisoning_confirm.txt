@@ -1,0 +1,20 @@
+Function arp_poisoning_confirm(packet_object)
+	//đảm bảo rằng máy tấn công không tự phản hồi lại các gói tin do chính mình gửi ra.
+    If the packet was sent by the attacker's own MAC address, ignore it
+	
+    //Log the destination IP of the ARP request for debugging
+
+    Loop through arp_group_one (g1)
+        If the sender IP of the ARP request matches g1's IP
+            Loop through arp_group_two (g2)
+                If the destination IP matches g2's IP
+                    Send a fake ARP reply from the attacker (with attacker's MAC) to g1, pretending to be g2
+
+        If poison_oneway is disabled
+            If the destination IP matches g1's IP
+                Loop through arp_group_two (g2)
+                    If the sender IP matches g2's IP
+                        Send a fake ARP reply from the attacker (with attacker's MAC) to g2, pretending to be g1
+
+End function
+
