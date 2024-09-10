@@ -273,41 +273,57 @@ libnet_ptag_t ec_build_link_layer(u_int8 dlt, u_int8 *dst, u_int16 proto, libnet
  * helper function to send out an ARP packet 
  // chức năng trợ giúp để gửi một gói ARP
  */
+//type: Loại gói tin ARP, ví dụ ARP Request (ARPOP_REQUEST) hoặc ARP Reply (ARPOP_REPLY).
+// sip: Con trỏ đến cấu trúc ip_addr chứa địa chỉ IP của máy gửi.
+// smac: Con trỏ đến địa chỉ MAC của máy gửi.
+// tmac: Con trỏ đến địa chỉ MAC của máy nhận.
 int send_arp(u_char type, struct ip_addr *sip, u_int8 *smac, struct ip_addr *tip, u_int8 *tmac)
 {
+   // libnet_ptag_t và libnet_ptag: biến lưu trữ thông tin lquan đến gói tin và đối tượng
    libnet_ptag_t t;
    libnet_t *l;
+
    int c;
 
    /* if not lnet warn the developer ;) */
    /**/
+   //kiểm tra đối tượng libnet có đc khởi tạo k. Nếu k hàm sẽ phát hiện lỗi
    BUG_IF(EC_GBL_IFACE->lnet == NULL);
    l = EC_GBL_IFACE->lnet;
 
    SEND_LOCK;
 
    /* ARP uses 00:00:00:00:00:00 broadcast */
+   //nếu package là arp_request và MAC đích là broadcast thì thay đổi tmac
+   //thành địa chỉ broadcast arp
    if (type == ARPOP_REQUEST && tmac == MEDIA_BROADCAST)
       tmac = ARP_BROADCAST;
    
    /* create the ARP header */
+   //lib_build_arp được gọi để tạo gói tin ARP với các thông tin đc cung cấp
    t = libnet_build_arp(
-           ARPHRD_ETHER,            /* hardware addr */
-           ETHERTYPE_IP,            /* protocol addr */
+           ARPHRD_ETHER,            /* hardware addr (ETHERNET) */  
+           ETHERTYPE_IP,            /* protocol addr (IP)*/
            MEDIA_ADDR_LEN,          /* hardware addr size */
            IP_ADDR_LEN,             /* protocol addr size */
-           type,                    /* operation type */
+           type,                    /* operation type */ //loại gói tin ARP (request hoặc reply) 
+           //smac và sip->addr: địa chỉ MAC và IP máy gửi
            smac,                    /* sender hardware addr */
            (u_char *)&(sip->addr),  /* sender protocol addr */
+           //tmac và tip->addr là địa chỉ MAC và IP của máy nhận
            tmac,                    /* target hardware addr */
            (u_char *)&(tip->addr),  /* target protocol addr */
+
            NULL,                    /* payload */
            0,                       /* payload size */
            l,                       /* libnet handle */
            0);                      /* pblock id */
+   //Kiểm tra lỗi nếu libnet_build_arp không thành công.
    ON_ERROR(t, -1, "libnet_build_arp: %s", libnet_geterror(l));
    
    /* MEDIA uses ff:ff:ff:ff:ff:ff broadcast */
+   //nếu ARP request và MAC đích là ARP_broadcast, thay đổi tmac 
+   // thành địa chỉ broadcast của lớp liên kết (MEDIA_BROADCAST)
    if (type == ARPOP_REQUEST && tmac == ARP_BROADCAST)
       tmac = MEDIA_BROADCAST;
    
@@ -316,7 +332,7 @@ int send_arp(u_char type, struct ip_addr *sip, u_int8 *smac, struct ip_addr *tip
    if (t == -1)
       FATAL_ERROR("Interface not suitable for layer2 sending");
    
-   /* send the packet */
+   /* gửi gói tin ARP đã đc tạo ra */
    c = libnet_write(l);
    ON_ERROR(c, -1, "libnet_write (%d): %s", c, libnet_geterror(l));
    
