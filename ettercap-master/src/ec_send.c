@@ -353,7 +353,7 @@ int send_L3_icmp_unreach(struct packet_object *po)
    int c;
    libnet_t *l;
 
-   /* if not lnet warn the developer ;) */
+   /* if notc lnet warn the developer ;) */
    BUG_IF(EC_GBL_LNET->lnet_IP4 == 0);
    l = EC_GBL_LNET->lnet_IP4;
    SEND_LOCK;
@@ -479,18 +479,23 @@ int send_L3_icmp_echo(struct ip_addr *src, struct ip_addr *tgt)
 /*
  * helper function to send out an ICMP ECHO packet at layer 2
  */
+//type: loại gói tin ICMP(request hoặc reply)
+//sip: con trỏ đến ip_addr chứa địa chỉ IP nguồn
+//tip: con trỏ đến ip_addr chứa địa chỉ IP đích
+//tmac: con trỏ tới địa chỉ MAC đích
 int send_L2_icmp_echo(u_char type, struct ip_addr *sip, struct ip_addr *tip, u_int8 *tmac)
 {
+   //lưu trữ thông tin về gói tin và đối tượng
    libnet_ptag_t t;
    int c;
    libnet_t *l;
-   /* if not lnet warn the developer ;) */
+   /* kiểm tra libnet đc khởi tạo hay chưa */
    BUG_IF(EC_GBL_IFACE->lnet == 0);
    l = EC_GBL_IFACE->lnet;
    
    SEND_LOCK;
 
-   /* create the ICMP header */
+   /* tạo gói tin ICMP echo */
    t = libnet_build_icmpv4_echo(
            type,                    /* type */
            0,                       /* code */
@@ -501,26 +506,28 @@ int send_L2_icmp_echo(u_char type, struct ip_addr *sip, struct ip_addr *tip, u_i
            0,                       /* payload size */
            l,                       /* libnet handle */
            0);                      /* pblock id */
+   //kiểm tra lỗi nếu tạo gói ICMP thất bại        
    ON_ERROR(t, -1, "libnet_build_icmpv4_echo: %s", libnet_geterror(l));
   
    /* auto calculate the checksum */
    libnet_toggle_checksum(l, t, LIBNET_ON);
   
-   /* create the IP header */
+   /* tạo tiêu đề IP cho gói tin */
    t = libnet_build_ipv4(
-           LIBNET_IPV4_H + LIBNET_ICMPV4_ECHO_H,       /* length */
+           LIBNET_IPV4_H + LIBNET_ICMPV4_ECHO_H,       /* tổng chiều dài IP và ICMP */
            0,                                          /* TOS */
            htons(EC_MAGIC_16),                         /* IP ID */
            0,                                          /* IP Frag */
            64,                                         /* TTL */
            IPPROTO_ICMP,                               /* protocol */
            0,                                          /* checksum */
-           *sip->addr32,                               /* source IP */
-           *tip->addr32,                               /* destination IP */
+           *sip->addr32,                               /* IP nguồn */
+           *tip->addr32,                               /* IP đích */
            NULL,                                       /* payload */
            0,                                          /* payload size */
            l,                                          /* libnet handle */
            0);
+   //kiẻme tra lỗi khi khởi taọ failed
    ON_ERROR(t, -1, "libnet_build_ipv4: %s", libnet_geterror(l));
   
    /* auto calculate the checksum */
@@ -531,11 +538,12 @@ int send_L2_icmp_echo(u_char type, struct ip_addr *sip, struct ip_addr *tip, u_i
    if (t == -1)
       FATAL_ERROR("Interface not suitable for layer2 sending");
 
-   /* send the packet to Layer 2 */
+   /* gửi gói ICMP package */
    c = libnet_write(l);
+   //check error
    ON_ERROR(c, -1, "libnet_write (%d): %s", c, libnet_geterror(l));
  
-   /* clear the pblock */
+   /* clear the package */
    libnet_clear_packet(l);
 
    SEND_UNLOCK;

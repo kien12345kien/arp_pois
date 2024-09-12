@@ -1,0 +1,46 @@
+Function send_arp(type, sip, smac, tip, tmac):
+
+   Declare variables:
+       t: to store ARP packet information
+       l: to reference libnet object
+       c: to store return value of libnet_write
+
+   Check if libnet object is initialized:
+       If not, report an error and stop execution
+
+   Lock sending mechanism to prevent conflicts
+
+   If the ARP request is broadcast:
+       Set target MAC address to ARP_BROADCAST
+
+   Build ARP packet with the following details:
+       - ETHERNET
+       - IP
+       - Hardware address size
+       - Protocol address size
+       - Operation type: ARP(request or reply)
+       - Sender MAC and IP addresses: smac, sip
+       - Target MAC and IP addresses: tmac, tip
+
+   Check for errors in building the ARP packet:
+       If error occurs, report it and stop execution
+
+   If the ARP request has ARP_BROADCAST as the target MAC:
+       Set target MAC to MEDIA_BROADCAST
+
+   Add link layer (media) header for Ethernet transmission
+
+   Check if link layer construction was successful:
+       If not, report an error and stop execution
+
+   Write the ARP packet to the network
+
+   Check if packet write was successful:
+       If not, report the error
+
+   Clear the packet to free up memory
+
+   Unlock sending mechanism
+
+   Return the result of the write operation
+
