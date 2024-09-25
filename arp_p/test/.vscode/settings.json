@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "arp_poisoning.h": "c",
+        "network.h": "c",
+        "error_messages.h": "c"
+    }
+}

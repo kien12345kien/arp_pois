@@ -16,6 +16,11 @@
         "ec.h": "c",
         "ec_packet.h": "c",
         "locale": "c",
-        "cstring": "c"
+        "cstring": "c",
+        "mutex": "c",
+        "bpf.h": "c",
+        "ec_mitm.h": "c",
+        "ec_ui.h": "c",
+        "stdarg.h": "c"
     }
 }

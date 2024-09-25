@@ -326,7 +326,7 @@ EC_THREAD_FUNC(arp_poisoner)
             
             /* chương trình sẽ gửi các gói tin ARP reply giả mạo */
             if (EC_GBL_CONF->arp_poison_reply) {
-               // gửi ARP reply packages from g2 to g1
+               // gửi ARP reply packages từ g2 tới g1 với địa chỉ MAC của attacker"attacke "EC_GBL_IFace>macm"
                send_arp(ARPOP_REPLY, &g2->ip, EC_GBL_IFACE->mac, &g1->ip, g1->mac); 
                /* only send from T2 to T1 */
                if (!poison_oneway)

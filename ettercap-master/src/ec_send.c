@@ -495,9 +495,9 @@ int send_L2_icmp_echo(u_char type, struct ip_addr *sip, struct ip_addr *tip, u_i
    
    SEND_LOCK;
 
-   /* tạo gói tin ICMP echo */
+   /* tạo gói tin ICMP echo request (ping) */
    t = libnet_build_icmpv4_echo(
-           type,                    /* type */
+           type,                    /* type = 8 */
            0,                       /* code */
            0,                       /* checksum */
            htons(EC_MAGIC_16),      /* identification number */
