@@ -85,7 +85,7 @@ int main(int argc, char ** argv)
   arp->ea_hdr.ar_pln = IP4LEN;
   arp->ea_hdr.ar_op = htons(ARPOP_REPLY);
 
-  // Địa chỉ MAC đích (ARP Target Hardware Address - Tha)
+  // Địa chỉ MAC đích (ARP Target Hardware Address - THA)
   sscanf(argv[5], "%x:%x:%x:%x:%x:%x", (unsigned int *) &arp->arp_tha[0],
                                        (unsigned int *) &arp->arp_tha[1],
                                        (unsigned int *) &arp->arp_tha[2],

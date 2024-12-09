@@ -1,0 +1,39 @@
+intro:
+	system overview  1-1.5 page
+	group into single paragraph past through labwork
+
+design:
+	2parts:
+		physical component:
+			module
+			http server
+			...
+			how each component interact with eachother
+				how many component ? ex: database, ....
+		action flow:
+			perform specific funtion
+			explain, deliver knowledg
+			explain, how concept work
+	
+	how to display in paper work:
+		mindset ideas: if discribe component -> discrbe all the component
+		service deploiment part:
+		network part:router, switch, vpn server,.....
+		user-case diagram: discribe system features
+		sequence diagrame: discribe flow of system work through time
+		|----------|		|----------|		|----------|		|-----------|
+		|   User   |   		|  http	   |		| Auth	   |		| DTBase    |
+		|----------|		|----------|		|----------|		|-----------|
+		     ||				
+		     ||				
+		     ||				
+		     ||				
+		     ||
+		     ||
+		     ||
+		     ||
+		     ||
+		     ||
+		     ||
+		Database Diagram: table of all data in your system(show structer of data)
+		Evaluation matrix: Discribe how to perform 
